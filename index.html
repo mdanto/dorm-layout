@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dorm Studio Layout — 17'6" × 14'11"</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 0.85rem; margin-bottom: 16px; }
+  .controls { margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .controls button { background: #2a2a4a; border: 1px solid #444; color: #ccc; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+  .controls button:hover { background: #3a3a5a; color: #fff; }
+  .controls button.active { background: #4a6fa5; border-color: #6a8fc5; color: #fff; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #aaa; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2); }
+
+  .room-container { position: relative; }
+  .room {
+    position: relative;
+    background: #2a2a3a;
+    border: 3px solid #666;
+    overflow: hidden;
+  }
+
+  /* Grid overlay */
+  .room.show-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Structural elements */
+  .structure {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: #999;
+    letter-spacing: 0.5px;
+  }
+  .kitchen { background: repeating-linear-gradient(45deg, #1a2a1a, #1a2a1a 4px, #1f301f 4px, #1f301f 8px); border: 1px dashed #3a5a3a; }
+  .bathroom { background: repeating-linear-gradient(-45deg, #1a1a2a, #1a1a2a 4px, #1f1f30 4px, #1f1f30 8px); border: 1px dashed #3a3a6a; }
+  .foyer { background: #222235; border: 1px dashed #444; }
+  .closet { background: #252530; border: 1px dashed #555; }
+  .balcony { background: rgba(100,180,255,0.08); border: 2px dashed #4a8ab5; }
+
+  /* Door/window markers */
+  .door { position: absolute; background: #b8860b; height: 3px; z-index: 5; }
+  .window { position: absolute; background: #4a9ab5; z-index: 5; }
+  .balcony-door { position: absolute; border: 2px dashed #4a9ab5; background: rgba(74,154,181,0.15); z-index: 5; }
+
+  /* Furniture */
+  .furniture {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #fff;
+    border-radius: 3px;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 0.15s;
+    z-index: 10;
+    line-height: 1.2;
+  }
+  .furniture:hover { box-shadow: 0 0 12px rgba(255,255,255,0.3); z-index: 20; }
+  .furniture.dragging { opacity: 0.8; box-shadow: 0 0 20px rgba(255,255,255,0.4); z-index: 30; cursor: grabbing; }
+  .furniture .dimensions { font-size: 0.5rem; font-weight: 400; opacity: 0.7; display: block; }
+
+  /* Zone labels */
+  .zone-label {
+    position: absolute;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.15);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Furniture colors */
+  .bed { background: #5b4a8a; border: 2px solid #7b6aaa; }
+  .nightstand { background: #6b5a3a; border: 2px solid #8b7a5a; }
+  .dresser { background: #8b5a3a; border: 2px solid #ab7a5a; }
+  .sofa { background: #3a6b5a; border: 2px solid #5a8b7a; }
+  .coffee-table { background: #5a5a3a; border: 2px solid #7a7a5a; }
+  .desk { background: #3a5a8b; border: 2px solid #5a7aab; }
+  .chair { background: #3a5a8b; border: 2px solid #5a7aab; }
+  .mirror { background: #6a6a8a; border: 2px solid #8a8aaa; }
+  .shelves { background: #7a5a6a; border: 2px solid #9a7a8a; }
+  .shoe-cabinet { background: #5a6a5a; border: 2px solid #7a8a7a; }
+  .bar { background: #8a6a3a; border: 2px solid #aa8a5a; }
+  .stool { background: #8a6a3a; border: 2px solid #aa8a5a; }
+
+  .info { margin-top: 16px; max-width: 700px; color: #888; font-size: 0.8rem; line-height: 1.5; text-align: center; }
+  .info strong { color: #aaa; }
+
+  /* Dimension labels on walls */
+  .dim-label {
+    position: absolute;
+    font-size: 0.7rem;
+    color: #666;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Studio Layout — 17'6" × 14'11"</h1>
+<p class="subtitle">Drag furniture to rearrange. Scale: 1ft ≈ 40px.</p>
+
+<div class="controls">
+  <button id="gridToggle" onclick="toggleGrid()">Toggle Grid</button>
+  <button id="resetBtn" onclick="resetPositions()">Reset Layout</button>
+  <button id="labelsToggle" onclick="toggleLabels()">Toggle Zones</button>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#5b4a8a"></div>Sleeping</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3a6b5a"></div>Living</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3a5a8b"></div>Work</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#8a6a3a"></div>Dining</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#5a6a5a"></div>Entry</div>
+</div>
+
+<!-- Room: 17.5ft x 14.92ft => 700px x 597px at 40px/ft -->
+<div class="room-container">
+  <div class="dim-label" style="top:-18px; left:50%; transform:translateX(-50%);">17' 6"</div>
+  <div class="dim-label" style="left:-40px; top:50%; transform:translateY(-50%) rotate(-90deg);">14' 11"</div>
+
+  <div class="room show-grid" id="room" style="width:700px; height:597px;">
+
+    <!-- Structural areas -->
+    <div class="structure kitchen" style="left:0; top:0; width:100px; height:597px;">KITCHEN</div>
+    <div class="structure bathroom" style="left:0; bottom:0; width:200px; height:160px;">BATH</div>
+    <div class="structure foyer" style="right:0; bottom:0; width:220px; height:160px;">FOYER</div>
+    <div class="structure closet" style="right:220px; bottom:0; width:100px; height:100px;">CLOSET<br>W/D</div>
+    <div class="structure balcony" style="right:0; top:-60px; width:200px; height:60px;">BALCONY</div>
+
+    <!-- Balcony door -->
+    <div class="balcony-door" style="right:40px; top:0; width:120px; height:8px;" title="Balcony Door"></div>
+
+    <!-- Entry door -->
+    <div class="door" style="right:80px; bottom:0; width:60px;" title="Entry Door"></div>
+
+    <!-- Zone labels -->
+    <div class="zone-label" id="zoneLabel1" style="left:140px; top:60px;">SLEEPING</div>
+    <div class="zone-label" id="zoneLabel2" style="right:60px; top:220px;">LIVING</div>
+    <div class="zone-label" id="zoneLabel3" style="left:160px; top:220px;">WORK</div>
+    <div class="zone-label" id="zoneLabel4" style="left:120px; bottom:200px;">DINING</div>
+
+    <!-- FURNITURE — all draggable -->
+
+    <!-- Queen bed: 5' x 6'8" => 200px x 267px -->
+    <div class="furniture bed" id="bed" style="left:110px; top:10px; width:200px; height:267px;"
+         data-ox="110" data-oy="10">
+      Queen Bed<span class="dimensions">5' × 6'8"</span>
+    </div>
+
+    <!-- Night table 1: 2' x 1.5' => 80px x 60px -->
+    <div class="furniture nightstand" id="nt1" style="left:110px; top:280px; width:80px; height:60px;"
+         data-ox="110" data-oy="280">
+      Night<br>Table<span class="dimensions">2' × 1.5'</span>
+    </div>
+
+    <!-- Night table 2 -->
+    <div class="furniture nightstand" id="nt2" style="left:230px; top:280px; width:80px; height:60px;"
+         data-ox="230" data-oy="280">
+      Night<br>Table<span class="dimensions">2' × 1.5'</span>
+    </div>
+
+    <!-- Dresser/TV stand: 4' x 1.5' => 160px x 60px — room divider -->
+    <div class="furniture dresser" id="dresser" style="left:340px; top:140px; width:60px; height:200px;"
+         data-ox="340" data-oy="140">
+      Dresser<br>/TV<span class="dimensions">1.5'×5'</span>
+    </div>
+
+    <!-- Sofa bed: 6' x 3' => 240px x 120px -->
+    <div class="furniture sofa" id="sofa" style="left:420px; top:80px; width:120px; height:240px;"
+         data-ox="420" data-oy="80">
+      Sofa<br>Bed<span class="dimensions">3' × 6'</span>
+    </div>
+
+    <!-- Coffee table: 3.5' x 1.5' => 140px x 60px -->
+    <div class="furniture coffee-table" id="coffeetable" style="left:550px; top:160px; width:60px; height:140px;"
+         data-ox="550" data-oy="160">
+      Coffee<br>Table<span class="dimensions">1.5'×3.5'</span>
+    </div>
+
+    <!-- Desk: 4' x 2' => 160px x 80px — near balcony for light -->
+    <div class="furniture desk" id="desk" style="left:140px; top:350px; width:180px; height:80px;"
+         data-ox="140" data-oy="350">
+      Desk<span class="dimensions">4.5' × 2'</span>
+    </div>
+
+    <!-- Desk chair: 1.5' x 1.5' => 60px x 60px -->
+    <div class="furniture chair" id="deskchair" style="left:200px; top:435px; width:60px; height:60px;"
+         data-ox="200" data-oy="435">
+      Chair<span class="dimensions">1.5'²</span>
+    </div>
+
+    <!-- Floor mirror: 1.5' x 0.5' => 60px x 20px -->
+    <div class="furniture mirror" id="mirror" style="left:390px; bottom:165px; width:60px; height:16px;"
+         data-ox="390" data-oy="416">
+      Mirror<span class="dimensions">1.5' × 6"</span>
+    </div>
+
+    <!-- Shelves: 3' x 1' => 120px x 40px -->
+    <div class="furniture shelves" id="shelves" style="left:110px; top:500px; width:160px; height:40px;"
+         data-ox="110" data-oy="500">
+      Shelves<span class="dimensions">4' × 1'</span>
+    </div>
+
+    <!-- Shoe cabinet: 2.5' x 1' => 100px x 40px — in foyer -->
+    <div class="furniture shoe-cabinet" id="shoes" style="right:10px; bottom:115px; width:40px; height:100px;"
+         data-ox="650" data-oy="382">
+      Shoes<span class="dimensions">1'×2.5'</span>
+    </div>
+
+    <!-- Bar: 3' x 1.5' => 120px x 60px — near kitchen -->
+    <div class="furniture bar" id="bar" style="left:110px; bottom:180px; width:120px; height:50px;"
+         data-ox="110" data-oy="367">
+      Bar / Table<span class="dimensions">3' × 1.5'</span>
+    </div>
+
+    <!-- Stool 1 -->
+    <div class="furniture stool" id="stool1" style="left:125px; bottom:130px; width:40px; height:40px;"
+         data-ox="125" data-oy="427">
+      Stool<span class="dimensions">1'²</span>
+    </div>
+
+    <!-- Stool 2 -->
+    <div class="furniture stool" id="stool2" style="left:175px; bottom:130px; width:40px; height:40px;"
+         data-ox="175" data-oy="427">
+      Stool<span class="dimensions">1'²</span>
+    </div>
+
+  </div>
+</div>
+
+<div class="info">
+  <strong>Layout notes:</strong> Bed against back-left wall keeps balcony clear.
+  Dresser/TV doubles as room divider between sleeping and living zones.
+  Sofa bed faces TV. Desk gets natural light from balcony.
+  Bar near kitchen for dining. Shoe cabinet + mirror in foyer.
+  <br><br>
+  <strong>Tip:</strong> Drag any piece to try alternate arrangements. Hit "Reset" to restore the original layout.
+</div>
+
+<script>
+// Drag logic
+let dragEl = null, offsetX = 0, offsetY = 0;
+const room = document.getElementById('room');
+
+document.querySelectorAll('.furniture').forEach(el => {
+  el.addEventListener('mousedown', startDrag);
+  el.addEventListener('touchstart', startDragTouch, {passive: false});
+});
+
+function startDrag(e) {
+  dragEl = e.currentTarget;
+  dragEl.classList.add('dragging');
+  const rect = dragEl.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', stopDrag);
+  e.preventDefault();
+}
+
+function startDragTouch(e) {
+  dragEl = e.currentTarget;
+  dragEl.classList.add('dragging');
+  const rect = dragEl.getBoundingClientRect();
+  const touch = e.touches[0];
+  offsetX = touch.clientX - rect.left;
+  offsetY = touch.clientY - rect.top;
+  document.addEventListener('touchmove', onDragTouch, {passive: false});
+  document.addEventListener('touchend', stopDrag);
+  e.preventDefault();
+}
+
+function onDrag(e) {
+  if (!dragEl) return;
+  moveTo(e.clientX, e.clientY);
+}
+
+function onDragTouch(e) {
+  if (!dragEl) return;
+  const touch = e.touches[0];
+  moveTo(touch.clientX, touch.clientY);
+  e.preventDefault();
+}
+
+function moveTo(cx, cy) {
+  const roomRect = room.getBoundingClientRect();
+  let x = cx - roomRect.left - offsetX;
+  let y = cy - roomRect.top - offsetY;
+  // Clamp inside room
+  x = Math.max(0, Math.min(x, room.offsetWidth - dragEl.offsetWidth));
+  y = Math.max(0, Math.min(y, room.offsetHeight - dragEl.offsetHeight));
+  dragEl.style.left = x + 'px';
+  dragEl.style.top = y + 'px';
+  dragEl.style.right = 'auto';
+  dragEl.style.bottom = 'auto';
+}
+
+function stopDrag() {
+  if (dragEl) dragEl.classList.remove('dragging');
+  dragEl = null;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', stopDrag);
+  document.removeEventListener('touchmove', onDragTouch);
+  document.removeEventListener('touchend', stopDrag);
+}
+
+// Controls
+function toggleGrid() {
+  room.classList.toggle('show-grid');
+  document.getElementById('gridToggle').classList.toggle('active');
+}
+
+function toggleLabels() {
+  document.querySelectorAll('.zone-label').forEach(el => {
+    el.style.display = el.style.display === 'none' ? '' : 'none';
+  });
+  document.getElementById('labelsToggle').classList.toggle('active');
+}
+
+function resetPositions() {
+  document.querySelectorAll('.furniture').forEach(el => {
+    if (el.dataset.ox !== undefined) {
+      el.style.left = el.dataset.ox + 'px';
+      el.style.top = el.dataset.oy + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+    }
+  });
+}
+
+// Init grid toggle as active
+document.getElementById('gridToggle').classList.add('active');
+</script>
+
+</body>
+</html>
