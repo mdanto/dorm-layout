@@ -3,336 +3,576 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Dorm Studio Layout — 17'6" × 14'11"</title>
+<title>Studio Layout — 17'6" × 14'11"</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #1a1a2e; color: #eee;
+    background: #111119; color: #eee;
     display: flex; flex-direction: column; align-items: center;
-    padding: 10px; min-height: 100vh;
+    min-height: 100vh; overflow-x: hidden;
   }
-  h1 { font-size: 1rem; margin-bottom: 1px; text-align: center; }
-  .subtitle { color: #888; font-size: 0.7rem; margin-bottom: 6px; text-align: center; }
 
-  .controls { margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  .controls button { background: #2a2a4a; border: 1px solid #444; color: #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
-  .controls button:hover { background: #3a3a5a; color: #fff; }
-  .controls button.active { background: #4a6fa5; border-color: #6a8fc5; color: #fff; }
+  /* Tabs */
+  .tabs {
+    display: flex; width: 100%; max-width: 700px;
+    border-bottom: 2px solid #333;
+    position: sticky; top: 0; z-index: 100; background: #111119;
+  }
+  .tab {
+    flex: 1; padding: 12px 0; text-align: center;
+    font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px;
+    color: #666; cursor: pointer; border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: #7aa2d4; border-bottom-color: #7aa2d4; }
+  .tab:not(.active):hover { color: #999; }
 
-  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; justify-content: center; }
-  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.65rem; color: #aaa; }
-  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2); }
+  .view { display: none; width: 100%; max-width: 700px; }
+  .view.active { display: flex; flex-direction: column; align-items: center; }
 
-  /* Room scales to screen width, max 700px, maintains aspect ratio */
-  .room-wrapper { width: 100%; max-width: 700px; position: relative; }
-  .dim-top { text-align: center; font-size: 0.65rem; color: #666; margin-bottom: 2px; letter-spacing: 1px; }
-  .dim-side { position: absolute; left: -18px; top: 50%; transform: translateY(-50%) rotate(-90deg); font-size: 0.65rem; color: #666; letter-spacing: 1px; white-space: nowrap; }
+  /* ===== 2D FLOOR PLAN ===== */
+  #plan-view { padding: 12px 10px; }
+  .room-wrapper { width: 100%; position: relative; padding-left: 20px; }
+  .dim-top { text-align: center; font-size: 0.6rem; color: #555; margin-bottom: 3px; letter-spacing: 1.5px; font-weight: 600; }
 
   .room {
-    position: relative;
-    width: 100%;
-    /* aspect ratio 700:597 = 1.1725 */
+    position: relative; width: 100%;
     aspect-ratio: 700 / 597;
-    background: #2a2a3a;
-    border: 2px solid #666;
+    background: #1e1e2a;
+    border: 2px solid #444;
     overflow: hidden;
-  }
-  .room.show-grid {
-    background-image:
-      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-    background-size: 5.71% 6.7%; /* ~40px out of 700 / 597 */
+    border-radius: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   }
 
-  /* All positions/sizes as percentages of room */
+  /* Structure */
   .structure {
     position: absolute;
     display: flex; align-items: center; justify-content: center;
-    font-size: min(0.6rem, 2.2vw); color: #999; letter-spacing: 0.3px;
+    font-size: min(0.55rem, 2vw); color: rgba(255,255,255,0.35);
+    font-weight: 600; letter-spacing: 0.5px;
   }
-  .kitchen { background: repeating-linear-gradient(45deg, #1a2a1a, #1a2a1a 4px, #1f301f 4px, #1f301f 8px); border: 1px dashed #3a5a3a;
+  .kitchen { background: #1a2520; border-right: 1px solid #2a4a3a;
     left:0; top:0; width:14.29%; height:100%; }
-  .bathroom { background: repeating-linear-gradient(-45deg, #1a1a2a, #1a1a2a 4px, #1f1f30 4px, #1f1f30 8px); border: 1px dashed #3a3a6a;
+  .bathroom { background: #1a1a28; border-top: 1px solid #2a2a4a; border-right: 1px solid #2a2a4a;
     left:0; bottom:0; width:28.57%; height:26.8%; }
-  .foyer { background: #222235; border: 1px dashed #444;
+  .foyer { background: #1c1c26; border-top: 1px solid #333; border-left: 1px solid #333;
     right:0; bottom:0; width:31.43%; height:26.8%; }
-  .closet-wd { background: #252530; border: 1px dashed #555;
+  .closet-wd { background: #1a1a22; border: 1px solid #2a2a35;
     right:31.43%; bottom:0; width:14.29%; height:16.75%; }
-  .balcony { background: rgba(100,180,255,0.08); border: 2px dashed #4a9ab5;
-    right:0; top:0; width:28.57%; height:0; padding-top: 10%; transform: translateY(-100%); }
 
-  .balcony-door { position: absolute; border: 2px dashed #4a9ab5; background: rgba(74,154,181,0.15); z-index: 5;
-    right: 5.71%; top: 0; width: 17.14%; height: 1.3%; }
-  .entry-door { position: absolute; background: #b8860b; z-index: 5;
-    right: 11.43%; bottom: 0; width: 8.57%; height: 0.5%; }
+  /* Doors */
+  .balcony-door { position:absolute; z-index:5;
+    right:5.71%; top:0; width:17.14%; height:1%;
+    background: linear-gradient(90deg, #4a8ab5, #6abadd, #4a8ab5);
+    box-shadow: 0 0 8px rgba(74,154,181,0.4); }
+  .entry-door { position:absolute; z-index:5;
+    right:11.43%; bottom:0; width:8.57%; height:0.7%;
+    background: #b8860b; box-shadow: 0 0 6px rgba(184,134,11,0.4); }
 
-  .zone-label {
-    position: absolute; font-size: min(0.6rem, 2vw); font-weight: 700;
-    text-transform: uppercase; letter-spacing: 1px;
-    color: rgba(255,255,255,0.12); pointer-events: none; z-index: 1;
-  }
+  /* Balcony indicator */
+  .balcony-label { position:absolute; z-index:2;
+    right:5.71%; top:1.5%; font-size: min(0.5rem,1.8vw);
+    color: #4a8ab5; letter-spacing: 1px; font-weight: 600; }
 
-  /* Furniture - percentage positioned */
+  /* Furniture */
   .furniture {
     position: absolute;
     display: flex; align-items: center; justify-content: center; text-align: center;
-    font-size: min(0.55rem, 2vw); font-weight: 600; color: #fff;
-    border-radius: 3px; cursor: grab; user-select: none;
-    transition: box-shadow 0.15s; z-index: 10; line-height: 1.1;
-    overflow: hidden;
+    font-size: min(0.5rem, 1.8vw); font-weight: 600; color: #fff;
+    border-radius: 4px; cursor: grab; user-select: none;
+    z-index: 10; line-height: 1.15;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: box-shadow 0.15s, transform 0.1s;
   }
-  .furniture:hover { box-shadow: 0 0 10px rgba(255,255,255,0.3); z-index: 20; }
-  .furniture.dragging { opacity: 0.85; box-shadow: 0 0 16px rgba(255,255,255,0.4); z-index: 30; cursor: grabbing; }
-  .furniture .dim { font-size: min(0.45rem, 1.6vw); font-weight: 400; opacity: 0.7; display: block; }
+  .furniture:active { transform: scale(1.03); box-shadow: 0 4px 16px rgba(255,255,255,0.15); z-index: 30; }
+  .furniture .dim { font-size: min(0.4rem, 1.4vw); font-weight: 400; opacity: 0.6; display: block; margin-top: 1px; }
 
-  /* Colors */
-  .bed { background: #5b4a8a; border: 2px solid #7b6aaa; }
-  .nightstand { background: #6b5a3a; border: 2px solid #8b7a5a; }
-  .dresser { background: #8b5a3a; border: 2px solid #ab7a5a; }
-  .sofa { background: #3a6b5a; border: 2px solid #5a8b7a; }
-  .coffee-table { background: #5a5a3a; border: 2px solid #7a7a5a; }
-  .desk { background: #3a5a8b; border: 2px solid #5a7aab; }
-  .chair { background: #3a5a8b; border: 2px solid #5a7aab; }
-  .mirror { background: #6a6a8a; border: 2px solid #8a8aaa; }
-  .shelves { background: #7a5a6a; border: 2px solid #9a7a8a; }
-  .shoe-cabinet { background: #5a6a5a; border: 2px solid #7a8a7a; }
-  .bar { background: #8a6a3a; border: 2px solid #aa8a5a; }
-  .stool { background: #8a6a3a; border: 2px solid #aa8a5a; }
+  /* Furniture colors — softer, more realistic */
+  .bed { background: linear-gradient(135deg, #4a3d6e, #5b4a8a); border: 1px solid #6b5a9a; }
+  .nightstand { background: linear-gradient(135deg, #5a4a30, #6b5a3a); border: 1px solid #7a6a4a; }
+  .dresser { background: linear-gradient(135deg, #7a4a2a, #8b5a3a); border: 1px solid #9a6a4a; }
+  .sofa { background: linear-gradient(135deg, #2a5a4a, #3a6b5a); border: 1px solid #4a7b6a; }
+  .coffee-table { background: linear-gradient(135deg, #4a4a2a, #5a5a3a); border: 1px solid #6a6a4a; }
+  .desk { background: linear-gradient(135deg, #2a4a7a, #3a5a8b); border: 1px solid #4a6a9a; }
+  .chair { background: linear-gradient(135deg, #2a4a7a, #3a5a8b); border: 1px solid #4a6a9a; }
+  .mirror { background: linear-gradient(135deg, #8a8aaa, #a0a0c0); border: 1px solid #b0b0d0; }
+  .shelves { background: linear-gradient(135deg, #6a4a5a, #7a5a6a); border: 1px solid #8a6a7a; }
+  .shoe-cabinet { background: linear-gradient(135deg, #4a5a4a, #5a6a5a); border: 1px solid #6a7a6a; }
+  .bar { background: linear-gradient(135deg, #7a5a2a, #8a6a3a); border: 1px solid #9a7a4a; }
+  .stool { background: linear-gradient(135deg, #7a5a2a, #8a6a3a); border: 1px solid #9a7a4a; border-radius: 50%; }
 
-  .info { margin-top: 12px; max-width: 700px; color: #888; font-size: 0.7rem; line-height: 1.4; text-align: center; padding: 0 5px; }
-  .info strong { color: #aaa; }
+  .plan-notes {
+    margin-top: 10px; padding: 8px 12px;
+    background: #181822; border-radius: 6px; border: 1px solid #2a2a3a;
+    font-size: 0.7rem; color: #777; line-height: 1.5; text-align: center;
+  }
+  .plan-notes strong { color: #999; }
+
+  /* ===== 3D VIEW ===== */
+  #three-view { padding: 0; }
+  #three-canvas {
+    width: 100%; max-width: 700px;
+    aspect-ratio: 4/3;
+    background: #000;
+    border-radius: 0 0 4px 4px;
+    touch-action: none;
+  }
+  .three-controls {
+    display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; justify-content: center;
+    width: 100%;
+  }
+  .three-controls button {
+    background: #222; border: 1px solid #444; color: #ccc;
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.7rem;
+  }
+  .three-controls button:hover { background: #333; color: #fff; }
+  .three-hint { font-size: 0.65rem; color: #555; text-align: center; padding: 4px; }
 </style>
 </head>
 <body>
 
-<h1>Studio Layout — 17'6" × 14'11"</h1>
-<p class="subtitle">Drag furniture to rearrange. Tap Reset to restore.</p>
-
-<div class="controls">
-  <button id="gridToggle" class="active" onclick="toggleGrid()">Grid</button>
-  <button id="resetBtn" onclick="resetPositions()">Reset</button>
-  <button id="labelsToggle" onclick="toggleLabels()">Zones</button>
-  <button id="legendToggle" onclick="toggleLegend()">Legend</button>
+<div class="tabs">
+  <div class="tab active" onclick="switchView('plan')">Floor Plan</div>
+  <div class="tab" onclick="switchView('three')">3D View</div>
 </div>
 
-<div class="legend" id="legend" style="display:none;">
-  <div class="legend-item"><div class="legend-swatch" style="background:#5b4a8a"></div>Sleep</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#3a6b5a"></div>Living</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#3a5a8b"></div>Work</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#8a6a3a"></div>Dining</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#5a6a5a"></div>Entry</div>
-</div>
+<!-- ===== 2D FLOOR PLAN ===== -->
+<div class="view active" id="plan-view">
+  <div class="room-wrapper">
+    <div class="dim-top">17' 6" wide &times; 14' 11" deep</div>
+    <div class="room" id="room">
+      <!-- Structure -->
+      <div class="structure kitchen">KITCHEN</div>
+      <div class="structure bathroom">BATH</div>
+      <div class="structure foyer">FOYER</div>
+      <div class="structure closet-wd">CLOSET</div>
+      <div class="balcony-door"></div>
+      <div class="entry-door"></div>
+      <div class="balcony-label">&#x2191; BALCONY</div>
 
-<div class="room-wrapper">
-  <div class="dim-top">17' 6"</div>
-  <div class="dim-side">14' 11"</div>
-
-  <div class="room show-grid" id="room">
-
-    <!-- Structure -->
-    <div class="structure kitchen">KITCHEN</div>
-    <div class="structure bathroom">BATH</div>
-    <div class="structure foyer">FOYER</div>
-    <div class="structure closet-wd">CLOSET<br>W/D</div>
-
-    <div class="balcony-door" title="Balcony Door"></div>
-    <div class="entry-door" title="Entry Door"></div>
-
-    <!-- Zone labels -->
-    <div class="zone-label" style="left:22%; top:8%;">SLEEPING</div>
-    <div class="zone-label" style="right:8%; top:35%;">LIVING</div>
-    <div class="zone-label" style="left:25%; top:55%;">WORK</div>
-    <div class="zone-label" style="left:18%; bottom:32%;">DINING</div>
-
-    <!-- FURNITURE — all % based. data-ox/oy store original % positions -->
-
-    <!-- Queen bed: 28.57% x 44.72% (200/700 x 267/597) -->
-    <div class="furniture bed" id="bed"
-         style="left:15.71%; top:1.67%; width:28.57%; height:44.72%;"
-         data-ol="15.71" data-ot="1.67">
-      Queen Bed<span class="dim">5'×6'8"</span>
+      <!-- Furniture -->
+      <div class="furniture bed" id="bed"
+           style="left:15.71%; top:1.67%; width:28.57%; height:44.72%;"
+           data-ol="15.71" data-ot="1.67">
+        Queen Bed<span class="dim">5' &times; 6'8"</span>
+      </div>
+      <div class="furniture nightstand" id="nt1"
+           style="left:15.71%; top:47.4%; width:11.43%; height:10.05%;"
+           data-ol="15.71" data-ot="47.4">
+        NT<span class="dim">2'&times;1.5'</span>
+      </div>
+      <div class="furniture nightstand" id="nt2"
+           style="left:32.86%; top:47.4%; width:11.43%; height:10.05%;"
+           data-ol="32.86" data-ot="47.4">
+        NT<span class="dim">2'&times;1.5'</span>
+      </div>
+      <div class="furniture dresser" id="dresser"
+           style="left:48.57%; top:20%; width:8.57%; height:33.5%;"
+           data-ol="48.57" data-ot="20">
+        Dresser<br>/TV<span class="dim">1.5'&times;5'</span>
+      </div>
+      <div class="furniture sofa" id="sofa"
+           style="left:60%; top:10%; width:17.14%; height:40.2%;"
+           data-ol="60" data-ot="10">
+        Sofa<br>Bed<span class="dim">3'&times;6'</span>
+      </div>
+      <div class="furniture coffee-table" id="coffeetable"
+           style="left:78.57%; top:22%; width:8.57%; height:23.45%;"
+           data-ol="78.57" data-ot="22">
+        Coffee<br>Tbl<span class="dim">1.5'&times;3.5'</span>
+      </div>
+      <div class="furniture desk" id="desk"
+           style="left:18%; top:59%; width:25.71%; height:13.4%;"
+           data-ol="18" data-ot="59">
+        Desk<span class="dim">4.5'&times;2'</span>
+      </div>
+      <div class="furniture chair" id="deskchair"
+           style="left:27%; top:73%; width:8.57%; height:8%;"
+           data-ol="27" data-ot="73">
+        Chair
+      </div>
+      <div class="furniture mirror" id="mirror"
+           style="left:56%; top:69%; width:8.57%; height:2.68%;"
+           data-ol="56" data-ot="69">
+        Mirror
+      </div>
+      <div class="furniture shelves" id="shelves"
+           style="left:15.71%; top:84%; width:22.86%; height:6.7%;"
+           data-ol="15.71" data-ot="84">
+        Shelves<span class="dim">4'&times;1'</span>
+      </div>
+      <div class="furniture shoe-cabinet" id="shoes"
+           style="left:92%; top:64%; width:6%; height:16.75%;"
+           data-ol="92" data-ot="64">
+        Shoes
+      </div>
+      <div class="furniture bar" id="bar"
+           style="left:15.71%; top:74%; width:17.14%; height:8.38%;"
+           data-ol="15.71" data-ot="74">
+        Bar<span class="dim">3'&times;1.5'</span>
+      </div>
+      <div class="furniture stool" id="stool1"
+           style="left:18%; top:83%; width:5.5%; height:5.5%;"
+           data-ol="18" data-ot="83">&#9675;</div>
+      <div class="furniture stool" id="stool2"
+           style="left:26%; top:83%; width:5.5%; height:5.5%;"
+           data-ol="26" data-ot="83">&#9675;</div>
     </div>
-
-    <!-- Night table 1 -->
-    <div class="furniture nightstand" id="nt1"
-         style="left:15.71%; top:47.4%; width:11.43%; height:10.05%;"
-         data-ol="15.71" data-ot="47.4">
-      NT<span class="dim">2'×1.5'</span>
-    </div>
-
-    <!-- Night table 2 -->
-    <div class="furniture nightstand" id="nt2"
-         style="left:32.86%; top:47.4%; width:11.43%; height:10.05%;"
-         data-ol="32.86" data-ot="47.4">
-      NT<span class="dim">2'×1.5'</span>
-    </div>
-
-    <!-- Dresser/TV — vertical divider -->
-    <div class="furniture dresser" id="dresser"
-         style="left:48.57%; top:23.45%; width:8.57%; height:33.5%;"
-         data-ol="48.57" data-ot="23.45">
-      Dresser<br>/TV<span class="dim">1.5'×5'</span>
-    </div>
-
-    <!-- Sofa bed -->
-    <div class="furniture sofa" id="sofa"
-         style="left:60%; top:13.4%; width:17.14%; height:40.2%;"
-         data-ol="60" data-ot="13.4">
-      Sofa<br>Bed<span class="dim">3'×6'</span>
-    </div>
-
-    <!-- Coffee table -->
-    <div class="furniture coffee-table" id="coffeetable"
-         style="left:78.57%; top:26.8%; width:8.57%; height:23.45%;"
-         data-ol="78.57" data-ot="26.8">
-      Coffee<br>Tbl<span class="dim">1.5'×3.5'</span>
-    </div>
-
-    <!-- Desk -->
-    <div class="furniture desk" id="desk"
-         style="left:20%; top:58.63%; width:25.71%; height:13.4%;"
-         data-ol="20" data-ot="58.63">
-      Desk<span class="dim">4.5'×2'</span>
-    </div>
-
-    <!-- Desk chair -->
-    <div class="furniture chair" id="deskchair"
-         style="left:28.57%; top:72.86%; width:8.57%; height:10.05%;"
-         data-ol="28.57" data-ot="72.86">
-      Chair<span class="dim">1.5'</span>
-    </div>
-
-    <!-- Floor mirror -->
-    <div class="furniture mirror" id="mirror"
-         style="left:55.71%; top:70%; width:8.57%; height:2.68%;"
-         data-ol="55.71" data-ot="70">
-      Mirror<span class="dim">1.5'</span>
-    </div>
-
-    <!-- Shelves -->
-    <div class="furniture shelves" id="shelves"
-         style="left:15.71%; top:84%; width:22.86%; height:6.7%;"
-         data-ol="15.71" data-ot="84">
-      Shelves<span class="dim">4'×1'</span>
-    </div>
-
-    <!-- Shoe cabinet — in foyer -->
-    <div class="furniture shoe-cabinet" id="shoes"
-         style="left:92.86%; top:64%; width:5.71%; height:16.75%;"
-         data-ol="92.86" data-ot="64">
-      Shoes<span class="dim">1'×2.5'</span>
-    </div>
-
-    <!-- Bar/table — near kitchen -->
-    <div class="furniture bar" id="bar"
-         style="left:15.71%; top:74.54%; width:17.14%; height:8.38%;"
-         data-ol="15.71" data-ot="74.54">
-      Bar<span class="dim">3'×1.5'</span>
-    </div>
-
-    <!-- Stool 1 -->
-    <div class="furniture stool" id="stool1"
-         style="left:17.86%; top:83.42%; width:5.71%; height:6.7%;"
-         data-ol="17.86" data-ot="83.42">
-      ○
-    </div>
-
-    <!-- Stool 2 -->
-    <div class="furniture stool" id="stool2"
-         style="left:25%; top:83.42%; width:5.71%; height:6.7%;"
-         data-ol="25" data-ot="83.42">
-      ○
-    </div>
-
+  </div>
+  <div class="plan-notes">
+    <strong>Drag</strong> any piece to rearrange.
+    Dresser/TV divides sleeping from living. Desk gets balcony light.
   </div>
 </div>
 
-<div class="info">
-  <strong>Layout:</strong> Bed back-left, balcony clear. Dresser/TV divides sleep from living.
-  Sofa faces TV. Desk near balcony for light. Bar + stools near kitchen. Shoes + mirror at entry.
+<!-- ===== 3D VIEW ===== -->
+<div class="view" id="three-view">
+  <canvas id="three-canvas"></canvas>
+  <div class="three-controls">
+    <button onclick="setCam('corner')">Corner View</button>
+    <button onclick="setCam('entry')">From Entry</button>
+    <button onclick="setCam('balcony')">From Balcony</button>
+    <button onclick="setCam('top')">Bird's Eye</button>
+  </div>
+  <div class="three-hint">Swipe to rotate. Pinch to zoom.</div>
 </div>
 
+<!-- Three.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// ===== 2D Drag Logic =====
 const room = document.getElementById('room');
-let dragEl = null, startX = 0, startY = 0, elStartL = 0, elStartT = 0;
+let dragEl=null, startX=0, startY=0, elStartL=0, elStartT=0;
 
 document.querySelectorAll('.furniture').forEach(el => {
-  el.addEventListener('touchstart', onTouchStart, {passive: false});
-  el.addEventListener('mousedown', onMouseDown);
+  el.addEventListener('touchstart', ts, {passive:false});
+  el.addEventListener('mousedown', ms);
 });
 
-function onMouseDown(e) {
-  dragEl = e.currentTarget;
-  dragEl.classList.add('dragging');
-  startX = e.clientX;
-  startY = e.clientY;
-  elStartL = parseFloat(dragEl.style.left);
-  elStartT = parseFloat(dragEl.style.top);
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onEnd);
+function ms(e){
+  dragEl=e.currentTarget; startX=e.clientX; startY=e.clientY;
+  elStartL=parseFloat(dragEl.style.left); elStartT=parseFloat(dragEl.style.top);
+  document.addEventListener('mousemove',mm); document.addEventListener('mouseup',end);
   e.preventDefault();
 }
-
-function onTouchStart(e) {
-  dragEl = e.currentTarget;
-  dragEl.classList.add('dragging');
-  const t = e.touches[0];
-  startX = t.clientX;
-  startY = t.clientY;
-  elStartL = parseFloat(dragEl.style.left);
-  elStartT = parseFloat(dragEl.style.top);
-  document.addEventListener('touchmove', onTouchMove, {passive: false});
-  document.addEventListener('touchend', onEnd);
+function ts(e){
+  dragEl=e.currentTarget; const t=e.touches[0]; startX=t.clientX; startY=t.clientY;
+  elStartL=parseFloat(dragEl.style.left); elStartT=parseFloat(dragEl.style.top);
+  document.addEventListener('touchmove',tm,{passive:false}); document.addEventListener('touchend',end);
   e.preventDefault();
 }
-
-function onMouseMove(e) { move(e.clientX, e.clientY); }
-function onTouchMove(e) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }
-
-function move(cx, cy) {
-  if (!dragEl) return;
-  const rw = room.offsetWidth, rh = room.offsetHeight;
-  const dx = ((cx - startX) / rw) * 100;
-  const dy = ((cy - startY) / rh) * 100;
-  const ew = parseFloat(dragEl.style.width);
-  const eh = parseFloat(dragEl.style.height);
-  const nl = Math.max(0, Math.min(elStartL + dx, 100 - ew));
-  const nt = Math.max(0, Math.min(elStartT + dy, 100 - eh));
-  dragEl.style.left = nl + '%';
-  dragEl.style.top = nt + '%';
+function mm(e){mv(e.clientX,e.clientY);}
+function tm(e){mv(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault();}
+function mv(cx,cy){
+  if(!dragEl) return;
+  const rw=room.offsetWidth, rh=room.offsetHeight;
+  const dx=((cx-startX)/rw)*100, dy=((cy-startY)/rh)*100;
+  const ew=parseFloat(dragEl.style.width), eh=parseFloat(dragEl.style.height);
+  dragEl.style.left=Math.max(0,Math.min(elStartL+dx,100-ew))+'%';
+  dragEl.style.top=Math.max(0,Math.min(elStartT+dy,100-eh))+'%';
+}
+function end(){
+  dragEl=null;
+  document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',end);
+  document.removeEventListener('touchmove',tm); document.removeEventListener('touchend',end);
 }
 
-function onEnd() {
-  if (dragEl) dragEl.classList.remove('dragging');
-  dragEl = null;
-  document.removeEventListener('mousemove', onMouseMove);
-  document.removeEventListener('mouseup', onEnd);
-  document.removeEventListener('touchmove', onTouchMove);
-  document.removeEventListener('touchend', onEnd);
+// ===== Tab Switching =====
+function switchView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id+'-view').classList.add('active');
+  event.target.classList.add('active');
+  if(id==='three' && !window.threeInit) init3D();
 }
 
-function toggleGrid() {
-  room.classList.toggle('show-grid');
-  document.getElementById('gridToggle').classList.toggle('active');
-}
-function toggleLabels() {
-  document.querySelectorAll('.zone-label').forEach(el => {
-    el.style.display = el.style.display === 'none' ? '' : 'none';
-  });
-  document.getElementById('labelsToggle').classList.toggle('active');
-}
-function toggleLegend() {
-  const l = document.getElementById('legend');
-  l.style.display = l.style.display === 'none' ? '' : 'none';
-  document.getElementById('legendToggle').classList.toggle('active');
-}
-function resetPositions() {
-  document.querySelectorAll('.furniture').forEach(el => {
-    if (el.dataset.ol !== undefined) {
-      el.style.left = el.dataset.ol + '%';
-      el.style.top = el.dataset.ot + '%';
+// ===== 3D Scene =====
+// Room: 17.5ft wide (X), 14.92ft deep (Z), ~9ft tall (Y)
+const RW=17.5, RD=14.92, RH=9;
+
+function init3D(){
+  window.threeInit=true;
+  const canvas=document.getElementById('three-canvas');
+  const W=canvas.clientWidth, H=canvas.clientHeight;
+
+  const renderer=new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setSize(W,H);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=0.8;
+
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x1a1a2e);
+  scene.fog=new THREE.Fog(0x1a1a2e, 25, 45);
+
+  const camera=new THREE.PerspectiveCamera(55, W/H, 0.1, 100);
+  camera.position.set(16, 10, 16);
+  camera.lookAt(RW/2, 0, RD/2);
+
+  // Lights
+  const amb=new THREE.AmbientLight(0xffffff, 0.3);
+  scene.add(amb);
+
+  const ceil=new THREE.PointLight(0xffeedd, 0.8, 30);
+  ceil.position.set(RW/2, RH-0.5, RD/2);
+  ceil.castShadow=true;
+  scene.add(ceil);
+
+  const balcLight=new THREE.DirectionalLight(0x8abbdd, 0.6);
+  balcLight.position.set(RW, 8, 0);
+  balcLight.castShadow=true;
+  scene.add(balcLight);
+
+  // Materials
+  const floorMat=new THREE.MeshStandardMaterial({color:0x3a3530, roughness:0.8});
+  const wallMat=new THREE.MeshStandardMaterial({color:0xe8e0d4, roughness:0.9, side:THREE.DoubleSide});
+  const ceilMat=new THREE.MeshStandardMaterial({color:0xf5f0ea, roughness:0.95});
+  const kitchenMat=new THREE.MeshStandardMaterial({color:0x2a3a2a, roughness:0.7});
+  const bathMat=new THREE.MeshStandardMaterial({color:0x2a2a3a, roughness:0.7});
+  const glassMat=new THREE.MeshStandardMaterial({color:0x88bbdd, transparent:true, opacity:0.3, roughness:0.1});
+
+  // Floor
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD), floorMat);
+  floor.rotation.x=-Math.PI/2; floor.position.set(RW/2,0,RD/2);
+  floor.receiveShadow=true; scene.add(floor);
+
+  // Ceiling
+  const ceilG=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD), ceilMat);
+  ceilG.rotation.x=Math.PI/2; ceilG.position.set(RW/2,RH,RD/2);
+  scene.add(ceilG);
+
+  // Walls — back (Z=0), front (Z=RD), left (X=0), right (X=RW)
+  function wall(w,h,x,y,z,ry){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h), wallMat);
+    m.position.set(x,y,z); m.rotation.y=ry||0;
+    m.receiveShadow=true; scene.add(m);
+  }
+  wall(RW, RH, RW/2, RH/2, 0, 0);           // back
+  wall(RW, RH, RW/2, RH/2, RD, Math.PI);     // front
+  wall(RD, RH, 0, RH/2, RD/2, Math.PI/2);    // left
+  wall(RD, RH, RW, RH/2, RD/2, -Math.PI/2);  // right
+
+  // Kitchen zone floor
+  const kitFloor=new THREE.Mesh(new THREE.PlaneGeometry(2.5,RD), kitchenMat);
+  kitFloor.rotation.x=-Math.PI/2; kitFloor.position.set(1.25,0.01,RD/2);
+  scene.add(kitFloor);
+
+  // Kitchen counter
+  const counter=box(2.3,3,0.6, 0x5a4a3a); counter.position.set(1.25,1.5,RD/2); scene.add(counter);
+  const counterTop=box(2.5,0.1,0.7, 0x888078); counterTop.position.set(1.25,3.05,RD/2); scene.add(counterTop);
+
+  // Bath zone
+  const bathFloor=new THREE.Mesh(new THREE.PlaneGeometry(5,4), bathMat);
+  bathFloor.rotation.x=-Math.PI/2; bathFloor.position.set(2.5,0.01,RD-2);
+  scene.add(bathFloor);
+
+  // Balcony door (glass)
+  const bDoor=new THREE.Mesh(new THREE.PlaneGeometry(3,7), glassMat);
+  bDoor.position.set(RW-3, 3.5, 0.05); scene.add(bDoor);
+
+  // Furniture builder
+  function box(w,h,d,color){
+    const m=new THREE.Mesh(
+      new THREE.BoxGeometry(w,h,d),
+      new THREE.MeshStandardMaterial({color, roughness:0.7})
+    );
+    m.castShadow=true; m.receiveShadow=true;
+    return m;
+  }
+
+  // Queen Bed — back-left area
+  // Bed frame
+  const bedFrame=box(5,1.2,6.67, 0x5a4030);
+  bedFrame.position.set(5, 0.6, 3.33);
+  scene.add(bedFrame);
+  // Mattress
+  const mattress=box(4.8,0.6,6.47, 0xf0ece4);
+  mattress.position.set(5, 1.5, 3.33);
+  scene.add(mattress);
+  // Headboard
+  const headboard=box(5,3,0.3, 0x4a3525);
+  headboard.position.set(5, 2.5, 0.2);
+  scene.add(headboard);
+  // Pillows
+  const pillow1=box(1.8,0.4,1, 0xe0ddd5); pillow1.position.set(4.2,2,0.8); scene.add(pillow1);
+  const pillow2=box(1.8,0.4,1, 0xe0ddd5); pillow2.position.set(5.8,2,0.8); scene.add(pillow2);
+  // Blanket/cover
+  const blanket=box(4.6,0.15,4, 0x5b4a8a); blanket.position.set(5,1.85,4); scene.add(blanket);
+
+  // Night tables
+  const nt1=box(2,2,1.5, 0x6b5a3a); nt1.position.set(3.5,1,7.3); scene.add(nt1);
+  const nt2=box(2,2,1.5, 0x6b5a3a); nt2.position.set(6.5,1,7.3); scene.add(nt2);
+  // Lamps on night tables
+  const lamp1=box(0.3,1,0.3, 0xddddaa); lamp1.position.set(3.5,2.5,7.3); scene.add(lamp1);
+  const lamp2=box(0.3,1,0.3, 0xddddaa); lamp2.position.set(6.5,2.5,7.3); scene.add(lamp2);
+
+  // Dresser/TV — room divider, turned sideways
+  const dresser=box(1.5,2.8,5, 0x8b5a3a);
+  dresser.position.set(8.5,1.4,3.5); scene.add(dresser);
+  // TV on dresser
+  const tvScreen=box(0.1,1.8,3, 0x111111);
+  tvScreen.position.set(7.7,3.7,3.5); scene.add(tvScreen);
+  const tvStand=box(0.3,0.5,1, 0x222222);
+  tvStand.position.set(7.75,2.85,3.5); scene.add(tvStand);
+
+  // Sofa bed — right side
+  const sofaBase=box(3,1.2,6, 0x3a6b5a);
+  sofaBase.position.set(11,0.6,3); scene.add(sofaBase);
+  const sofaBack=box(0.5,2,6, 0x2a5a4a);
+  sofaBack.position.set(12.3,1.6,3); scene.add(sofaBack);
+  // Sofa cushions
+  const cush1=box(2.2,0.5,2.5, 0x4a8070); cush1.position.set(10.8,1.45,1.8); scene.add(cush1);
+  const cush2=box(2.2,0.5,2.5, 0x4a8070); cush2.position.set(10.8,1.45,4.2); scene.add(cush2);
+  // Throw pillows
+  const tp1=box(0.8,0.8,0.8, 0xaa8855); tp1.position.set(11.5,1.9,1); scene.add(tp1);
+  const tp2=box(0.8,0.8,0.8, 0x8855aa); tp2.position.set(11.5,1.9,5); scene.add(tp2);
+
+  // Coffee table
+  const ctTop=box(1.5,0.15,3.5, 0x6a6a4a);
+  ctTop.position.set(14,1.3,3); scene.add(ctTop);
+  const ctLeg1=box(0.15,1.2,0.15, 0x5a5a3a); ctLeg1.position.set(13.35,0.6,1.45); scene.add(ctLeg1);
+  const ctLeg2=box(0.15,1.2,0.15, 0x5a5a3a); ctLeg2.position.set(14.65,0.6,1.45); scene.add(ctLeg2);
+  const ctLeg3=box(0.15,1.2,0.15, 0x5a5a3a); ctLeg3.position.set(13.35,0.6,4.55); scene.add(ctLeg3);
+  const ctLeg4=box(0.15,1.2,0.15, 0x5a5a3a); ctLeg4.position.set(14.65,0.6,4.55); scene.add(ctLeg4);
+
+  // Desk — near balcony
+  const deskTop=box(4.5,0.12,2, 0x3a5a8b);
+  deskTop.position.set(6,2.5,8.5); scene.add(deskTop);
+  const deskLeg1=box(0.15,2.4,0.15, 0x2a4a7a); deskLeg1.position.set(3.9,1.2,7.6); scene.add(deskLeg1);
+  const deskLeg2=box(0.15,2.4,0.15, 0x2a4a7a); deskLeg2.position.set(8.1,1.2,7.6); scene.add(deskLeg2);
+  const deskLeg3=box(0.15,2.4,0.15, 0x2a4a7a); deskLeg3.position.set(3.9,1.2,9.4); scene.add(deskLeg3);
+  const deskLeg4=box(0.15,2.4,0.15, 0x2a4a7a); deskLeg4.position.set(8.1,1.2,9.4); scene.add(deskLeg4);
+
+  // Desk chair
+  const chairSeat=box(1.5,0.2,1.5, 0x333355);
+  chairSeat.position.set(6,1.8,10); scene.add(chairSeat);
+  const chairBack=box(1.5,1.5,0.15, 0x333355);
+  chairBack.position.set(6,2.75,10.7); scene.add(chairBack);
+
+  // Bar near kitchen
+  const barTop=box(3,0.15,1.5, 0x8a6a3a);
+  barTop.position.set(5,3.5,11.5); scene.add(barTop);
+  const barLeg1=box(0.15,3.4,0.15, 0x7a5a2a); barLeg1.position.set(3.6,1.7,10.85); scene.add(barLeg1);
+  const barLeg2=box(0.15,3.4,0.15, 0x7a5a2a); barLeg2.position.set(6.4,1.7,10.85); scene.add(barLeg2);
+  const barLeg3=box(0.15,3.4,0.15, 0x7a5a2a); barLeg3.position.set(3.6,1.7,12.15); scene.add(barLeg3);
+  const barLeg4=box(0.15,3.4,0.15, 0x7a5a2a); barLeg4.position.set(6.4,1.7,12.15); scene.add(barLeg4);
+
+  // Bar stools
+  function stool(x,z){
+    const seat=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.15,16),
+      new THREE.MeshStandardMaterial({color:0x8a6a3a,roughness:0.7}));
+    seat.position.set(x,2.6,z); seat.castShadow=true; scene.add(seat);
+    const leg=box(0.1,2.5,0.1, 0x6a5020); leg.position.set(x,1.3,z); scene.add(leg);
+  }
+  stool(4.3,13); stool(5.7,13);
+
+  // Shelves on wall
+  for(let i=0;i<3;i++){
+    const sh=box(4,0.12,0.8, 0x7a5a6a);
+    sh.position.set(5.5, 3+i*1.5, RD-0.45); scene.add(sh);
+  }
+
+  // Shoe cabinet in foyer
+  const shoeCab=box(1,3,2.5, 0x5a6a5a);
+  shoeCab.position.set(RW-0.6,1.5,RD-3); scene.add(shoeCab);
+
+  // Mirror near entry
+  const mirrorFrame=box(1.5,5,0.1, 0x8a8aaa);
+  mirrorFrame.position.set(10,3,RD-0.08); scene.add(mirrorFrame);
+  const mirrorGlass=new THREE.Mesh(
+    new THREE.PlaneGeometry(1.3,4.7),
+    new THREE.MeshStandardMaterial({color:0xccccee, metalness:0.9, roughness:0.05})
+  );
+  mirrorGlass.position.set(10,3,RD-0.12); mirrorGlass.rotation.y=Math.PI;
+  scene.add(mirrorGlass);
+
+  // Camera presets
+  window.setCam=function(preset){
+    switch(preset){
+      case 'corner':
+        camera.position.set(16,10,16); camera.lookAt(RW/2,2,RD/2); break;
+      case 'entry':
+        camera.position.set(RW/2,5,RD-1); camera.lookAt(RW/2,3,0); break;
+      case 'balcony':
+        camera.position.set(RW-3,5,1); camera.lookAt(5,2,RD/2); break;
+      case 'top':
+        camera.position.set(RW/2,18,RD/2); camera.lookAt(RW/2,0,RD/2); break;
     }
+  };
+
+  // Simple orbit controls (touch + mouse)
+  let isDrag=false, prevX=0, prevY=0;
+  let theta=0.8, phi=0.6, radius=18;
+  const target=new THREE.Vector3(RW/2, 2, RD/2);
+
+  function updateCamOrbit(){
+    camera.position.x=target.x+radius*Math.sin(phi)*Math.cos(theta);
+    camera.position.y=target.y+radius*Math.cos(phi);
+    camera.position.z=target.z+radius*Math.sin(phi)*Math.sin(theta);
+    camera.lookAt(target);
+  }
+
+  canvas.addEventListener('mousedown',e=>{isDrag=true;prevX=e.clientX;prevY=e.clientY;});
+  canvas.addEventListener('touchstart',e=>{
+    if(e.touches.length===1){isDrag=true;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;}
+  },{passive:true});
+
+  canvas.addEventListener('mousemove',e=>{
+    if(!isDrag)return;
+    theta-=(e.clientX-prevX)*0.01; phi-=(e.clientY-prevY)*0.01;
+    phi=Math.max(0.1,Math.min(Math.PI/2-0.05,phi));
+    prevX=e.clientX; prevY=e.clientY; updateCamOrbit();
+  });
+  canvas.addEventListener('touchmove',e=>{
+    if(!isDrag||e.touches.length!==1)return;
+    const t=e.touches[0];
+    theta-=(t.clientX-prevX)*0.01; phi-=(t.clientY-prevY)*0.01;
+    phi=Math.max(0.1,Math.min(Math.PI/2-0.05,phi));
+    prevX=t.clientX; prevY=t.clientY; updateCamOrbit();
+  },{passive:true});
+
+  canvas.addEventListener('mouseup',()=>isDrag=false);
+  canvas.addEventListener('touchend',()=>isDrag=false);
+
+  canvas.addEventListener('wheel',e=>{
+    radius+=e.deltaY*0.02; radius=Math.max(5,Math.min(30,radius));
+    updateCamOrbit(); e.preventDefault();
+  },{passive:false});
+
+  // Pinch zoom
+  let lastPinch=0;
+  canvas.addEventListener('touchmove',e=>{
+    if(e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(lastPinch>0){
+        radius+=(lastPinch-dist)*0.05;
+        radius=Math.max(5,Math.min(30,radius));
+        updateCamOrbit();
+      }
+      lastPinch=dist; isDrag=false;
+    }
+  },{passive:true});
+  canvas.addEventListener('touchend',()=>lastPinch=0);
+
+  updateCamOrbit();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    renderer.render(scene,camera);
+  }
+  animate();
+
+  // Resize
+  window.addEventListener('resize',()=>{
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+    renderer.setSize(w,h);
+    camera.aspect=w/h; camera.updateProjectionMatrix();
   });
 }
 </script>
