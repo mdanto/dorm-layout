@@ -12,8 +12,8 @@
     display: flex; flex-direction: column; align-items: center;
     padding: 10px; min-height: 100vh;
   }
-  h1 { font-size: 1.1rem; margin-bottom: 2px; text-align: center; }
-  .subtitle { color: #888; font-size: 0.75rem; margin-bottom: 10px; text-align: center; }
+  h1 { font-size: 1rem; margin-bottom: 1px; text-align: center; }
+  .subtitle { color: #888; font-size: 0.7rem; margin-bottom: 6px; text-align: center; }
 
   .controls { margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   .controls button { background: #2a2a4a; border: 1px solid #444; color: #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
@@ -113,9 +113,10 @@
   <button id="gridToggle" class="active" onclick="toggleGrid()">Grid</button>
   <button id="resetBtn" onclick="resetPositions()">Reset</button>
   <button id="labelsToggle" onclick="toggleLabels()">Zones</button>
+  <button id="legendToggle" onclick="toggleLegend()">Legend</button>
 </div>
 
-<div class="legend">
+<div class="legend" id="legend" style="display:none;">
   <div class="legend-item"><div class="legend-swatch" style="background:#5b4a8a"></div>Sleep</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#3a6b5a"></div>Living</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#3a5a8b"></div>Work</div>
@@ -320,6 +321,11 @@ function toggleLabels() {
     el.style.display = el.style.display === 'none' ? '' : 'none';
   });
   document.getElementById('labelsToggle').classList.toggle('active');
+}
+function toggleLegend() {
+  const l = document.getElementById('legend');
+  l.style.display = l.style.display === 'none' ? '' : 'none';
+  document.getElementById('legendToggle').classList.toggle('active');
 }
 function resetPositions() {
   document.querySelectorAll('.furniture').forEach(el => {
